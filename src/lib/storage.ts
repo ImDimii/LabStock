@@ -1,4 +1,4 @@
-﻿import { Chemical, Operator, StockMovement, AuditLog } from '../types';
+import { Chemical, Operator, StockMovement, AuditLog } from '../types';
 import { INITIAL_CHEMICALS, INITIAL_OPERATORS, generateInitialMovements, generateInitialAuditLogs } from './mockData';
 import { getSupabase } from './supabase';
 
@@ -117,6 +117,36 @@ export const StorageService = {
     }
     localStorage.setItem(STORAGE_KEYS.OPERATORS, JSON.stringify(current));
     return newOp;
+  },
+
+  async deleteOperator(id: string): Promise<boolean> {
+    const operators = await this.getOperators();
+    const target = operators.find(o => o.id === id);
+    if (!target) return false;
+
+    const supabase = getSupabase();
+    if (supabase) {
+      try {
+        const { error } = await supabase.from('operators').delete().eq('id', id);
+        if (error) console.error('❌ Errore Supabase deleteOperator:', error);
+      } catch (e) {
+        console.error('❌ Eccezione deleteOperator Supabase:', e);
+      }
+    }
+
+    const updated = operators.filter(o => o.id !== id);
+    localStorage.setItem(STORAGE_KEYS.OPERATORS, JSON.stringify(updated));
+
+    const activeOp = this.getActiveOperator();
+    await this.logAudit({
+      operator_id: activeOp?.id || 'system',
+      operator_name: activeOp ? `${activeOp.first_name} ${activeOp.last_name}` : 'Operatore',
+      action: 'UPDATE_OPERATOR',
+      details: `Eliminato operatore sanitario: ${target.first_name} ${target.last_name} (${target.role})`,
+      target_id: id
+    });
+
+    return true;
   },
 
   getActiveOperator(): Operator | null {

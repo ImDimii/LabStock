@@ -6,10 +6,8 @@ import {
   KeyRound, 
   Plus, 
   Edit3, 
+  Trash2,
   ShieldCheck, 
-  Mail, 
-  Building, 
-  CheckCircle2, 
   X, 
   AlertTriangle 
 } from 'lucide-react';
@@ -82,6 +80,22 @@ export const OperatorManager: React.FC<OperatorManagerProps> = ({
     setModalOpen(true);
   };
 
+  const handleDeleteOperator = async (op: Operator) => {
+    if (operators.length <= 1) {
+      alert('Non puoi eliminare l\'unico operatore rimasto nel sistema.');
+      return;
+    }
+
+    if (confirm(`Sei sicuro di voler eliminare l'operatore ${op.first_name} ${op.last_name} (${op.role})?`)) {
+      try {
+        await StorageService.deleteOperator(op.id);
+        onRefresh();
+      } catch (err: any) {
+        alert(err.message || 'Errore durante l\'eliminazione');
+      }
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!firstName.trim() || !lastName.trim()) {
@@ -133,29 +147,29 @@ export const OperatorManager: React.FC<OperatorManagerProps> = ({
     <div className="space-y-6 animate-in fade-in duration-300">
       
       {/* Header */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-4 sm:p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-cyan-400 text-xs font-semibold uppercase tracking-wider mb-1">
             <Users className="w-4 h-4" />
             <span>Personale Sanitario & Sicurezza</span>
           </div>
-          <h2 className="text-xl font-bold text-white">Gestione Operatori & PIN di Accesso</h2>
+          <h2 className="text-lg sm:text-xl font-bold text-white">Gestione Operatori & PIN di Accesso</h2>
           <p className="text-xs text-slate-400 mt-1 max-w-xl">
-            Ogni operatore possiede un PIN univoco per autenticarsi rapidamente ai terminali di laboratorio e firmare le movimentazioni di magazzino.
+            Ogni operatore possiede un PIN univoco per autenticarsi rapidamente ai terminali di laboratorio e firmare le movimentazioni.
           </p>
         </div>
 
         <button
           onClick={handleOpenAdd}
-          className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-slate-950 font-bold text-xs flex items-center gap-2 transition-all shadow-lg shadow-cyan-500/20 active:scale-95 shrink-0"
+          className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-slate-950 font-bold text-xs flex items-center gap-2 transition-all shadow-lg shadow-cyan-500/20 active:scale-95 shrink-0 cursor-pointer"
         >
           <Plus className="w-4 h-4" />
-          <span>Nuovo Operatore Sanitario</span>
+          <span>Nuovo Operatore</span>
         </button>
       </div>
 
       {/* Operator Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {operators.map(op => {
           const isActiveSession = activeOperator?.id === op.id;
 
@@ -163,7 +177,7 @@ export const OperatorManager: React.FC<OperatorManagerProps> = ({
             <div
               key={op.id}
               className={`bg-slate-900/90 border rounded-3xl p-5 shadow-xl flex flex-col justify-between transition-all ${
-                isActiveSession ? 'border-cyan-500/50 bg-cyan-950/20' : 'border-slate-800 hover:border-slate-700'
+                isActiveSession ? 'border-cyan-500/50 bg-cyan-950/20' : 'border-slate-800 hover:border-slate-750'
               }`}
             >
               <div>
@@ -177,7 +191,7 @@ export const OperatorManager: React.FC<OperatorManagerProps> = ({
                       Sessione Attiva
                     </span>
                   ) : (
-                    <span className="text-xs text-slate-500 font-mono">ID: {op.id}</span>
+                    <span className="text-xs text-slate-500 font-mono">ID: {op.id.slice(-6)}</span>
                   )}
                 </div>
 
@@ -187,7 +201,7 @@ export const OperatorManager: React.FC<OperatorManagerProps> = ({
                   <span>{op.role}</span>
                 </div>
 
-                <div className="mt-4 p-3 bg-slate-950/50 rounded-2xl border border-slate-800 space-y-2 text-xs">
+                <div className="mt-4 p-3 bg-slate-950/60 rounded-2xl border border-slate-800 space-y-2 text-xs">
                   <div className="flex items-center justify-between">
                     <span className="text-slate-400">PIN Personale:</span>
                     <span className="font-mono font-extrabold text-sm px-2 py-0.5 bg-slate-800 rounded-lg text-emerald-400 border border-slate-700">
@@ -209,13 +223,22 @@ export const OperatorManager: React.FC<OperatorManagerProps> = ({
                 </div>
               </div>
 
-              <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-end gap-2">
+              {/* Actions: Modifica & Elimina */}
+              <div className="mt-4 pt-3 border-t border-slate-800 flex items-center justify-end gap-2">
+                <button
+                  onClick={() => handleDeleteOperator(op)}
+                  title="Elimina Operatore"
+                  className="p-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 text-xs font-semibold transition-all cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+
                 <button
                   onClick={() => handleOpenEdit(op)}
-                  className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-all"
+                  className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
                 >
                   <Edit3 className="w-3.5 h-3.5" />
-                  <span>Modifica Dati & PIN</span>
+                  <span>Modifica</span>
                 </button>
               </div>
             </div>
@@ -225,30 +248,30 @@ export const OperatorManager: React.FC<OperatorManagerProps> = ({
 
       {/* MODAL CREAZIONE / MODIFICA OPERATORE */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-3 sm:p-4 animate-in fade-in duration-200 overflow-y-auto">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col my-auto max-h-[92vh]">
             
-            <div className="bg-gradient-to-r from-cyan-600 to-blue-600 p-5 text-white flex items-center justify-between">
+            <div className="bg-gradient-to-r from-cyan-600 to-blue-600 p-4 sm:p-5 text-white flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 bg-white/10 rounded-xl">
                   <KeyRound className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-base">
-                    {editingOp ? `Modifica Operatore: ${editingOp.first_name}` : 'Registra Nuovo Operatore'}
+                  <h3 className="font-bold text-sm sm:text-base">
+                    {editingOp ? `Modifica: ${editingOp.first_name}` : 'Nuovo Operatore Sanitario'}
                   </h3>
-                  <p className="text-xs text-cyan-100">Configura credenziali e PIN sanitario</p>
+                  <p className="text-[11px] sm:text-xs text-cyan-100">Configura anagrafica e PIN personale</p>
                 </div>
               </div>
               <button
                 onClick={() => setModalOpen(false)}
-                className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-all text-white"
+                className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-all text-white cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 overflow-y-auto">
               
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -310,7 +333,7 @@ export const OperatorManager: React.FC<OperatorManagerProps> = ({
                 <label className="text-xs font-semibold text-slate-300 block mb-1">Reparto / Settore</label>
                 <input
                   type="text"
-                  placeholder="Es. Ematologia, Microbiologia, Tossicologia"
+                  placeholder="Es. Ematologia, Microbiologia"
                   value={department}
                   onChange={(e) => setDepartment(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-100 text-xs focus:outline-none focus:border-cyan-500"
@@ -318,7 +341,7 @@ export const OperatorManager: React.FC<OperatorManagerProps> = ({
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-300 block mb-1">Email (Opzionale)</label>
+                <label className="text-xs font-semibold text-slate-300 block mb-1">Email</label>
                 <input
                   type="email"
                   placeholder="mario.rossi@laboratorio.it"
@@ -337,7 +360,7 @@ export const OperatorManager: React.FC<OperatorManagerProps> = ({
                       key={c}
                       type="button"
                       onClick={() => setBadgeColor(c)}
-                      className={`w-7 h-7 rounded-xl bg-gradient-to-br ${c} transition-all ${
+                      className={`w-7 h-7 rounded-xl bg-gradient-to-br ${c} transition-all cursor-pointer ${
                         badgeColor === c ? 'ring-2 ring-white scale-110' : 'opacity-70 hover:opacity-100'
                       }`}
                     />
@@ -352,18 +375,18 @@ export const OperatorManager: React.FC<OperatorManagerProps> = ({
                 </div>
               )}
 
-              <div className="pt-2 flex items-center justify-end gap-3 border-t border-slate-800">
+              <div className="pt-2 flex items-center justify-end gap-3 border-t border-slate-800 shrink-0">
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 transition-all"
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 transition-all cursor-pointer"
                 >
                   Annulla
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="px-5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold shadow-lg shadow-cyan-500/20 transition-all active:scale-95 disabled:opacity-50"
+                  className="px-5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold shadow-lg shadow-cyan-500/20 transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
                 >
                   {loading ? 'Salvataggio...' : 'Salva Operatore'}
                 </button>
