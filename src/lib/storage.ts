@@ -293,8 +293,16 @@ export const StorageService = {
         if (error) {
           console.error('❌ Errore Supabase getMovements:', error);
         } else if (data) {
-          localStorage.setItem(STORAGE_KEYS.MOVEMENTS, JSON.stringify(data));
-          return data as StockMovement[];
+          // Merge: i record locali scritti di recente ma non ancora su Supabase
+          // (race condition dopo insert) vengono preservati.
+          const supaIds = new Set(data.map((m: StockMovement) => m.id));
+          const localRaw = localStorage.getItem(STORAGE_KEYS.MOVEMENTS);
+          const localList: StockMovement[] = localRaw ? JSON.parse(localRaw) : [];
+          const localOnly = localList.filter(m => !supaIds.has(m.id));
+          const merged = [...localOnly, ...data as StockMovement[]];
+          merged.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+          localStorage.setItem(STORAGE_KEYS.MOVEMENTS, JSON.stringify(merged.slice(0, 500)));
+          return merged;
         }
       } catch (e) {
         console.error('❌ Eccezione Supabase getMovements:', e);
@@ -388,9 +396,13 @@ export const StorageService = {
       }
     }
 
-    const movements = await this.getMovements();
+    // Leggiamo direttamente da localStorage per evitare race condition con Supabase:
+    // se chiamassimo getMovements() farebbe un fetch Supabase che potrebbe non avere ancora
+    // il record appena inserito, sovrascrivendo la cache locale e perdendo il movimento.
+    const localMovementsRaw = localStorage.getItem(STORAGE_KEYS.MOVEMENTS);
+    const movements: StockMovement[] = localMovementsRaw ? JSON.parse(localMovementsRaw) : [];
     movements.unshift(movement);
-    localStorage.setItem(STORAGE_KEYS.MOVEMENTS, JSON.stringify(movements));
+    localStorage.setItem(STORAGE_KEYS.MOVEMENTS, JSON.stringify(movements.slice(0, 500)));
 
     const auditAction = params.type === 'usage' 
       ? 'RECORD_USAGE' 
@@ -424,8 +436,14 @@ export const StorageService = {
         if (error) {
           console.error('❌ Errore Supabase getAuditLogs:', error);
         } else if (data) {
-          localStorage.setItem(STORAGE_KEYS.AUDIT_LOGS, JSON.stringify(data));
-          return data as AuditLog[];
+          const supaIds = new Set(data.map((l: AuditLog) => l.id));
+          const localRaw = localStorage.getItem(STORAGE_KEYS.AUDIT_LOGS);
+          const localList: AuditLog[] = localRaw ? JSON.parse(localRaw) : [];
+          const localOnly = localList.filter(l => !supaIds.has(l.id));
+          const merged = [...localOnly, ...data as AuditLog[]];
+          merged.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+          localStorage.setItem(STORAGE_KEYS.AUDIT_LOGS, JSON.stringify(merged.slice(0, 500)));
+          return merged;
         }
       } catch (e) {
         console.error('❌ Eccezione Supabase getAuditLogs:', e);
